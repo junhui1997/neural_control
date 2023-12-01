@@ -45,6 +45,8 @@ kd = np.diag([kd1, kd2])
 # load historical error
 df = pd.read_pickle('data/pd_train.pkl')
 e_preds = df[['eq1', 'eq2']].values.transpose()
+
+
 while counter < total_epoch:
     if counter <= 128001: # 21 128001时候就是单纯的collect
         e_pred = np.array([[0], [0]])

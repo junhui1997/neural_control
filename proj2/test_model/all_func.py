@@ -6,11 +6,13 @@ import scipy
 import math
 import scipy.io as sio
 
-def generate_mat(folder_path,value_l,label_l):
+
+def generate_mat(folder_path, value_l, label_l):
     result_dict = {}
     for label, value in zip(label_l, value_l):
         result_dict[label] = value
-    sio.savemat(folder_path+'data.mat', result_dict)
+    sio.savemat(folder_path + 'data.mat', result_dict)
+
 
 def apply_norm(data):
     mean = data.mean(0)
@@ -110,13 +112,12 @@ def plot_all(q, dq, sTau, tout, q_ref, dq_ref, folder_path, show_other=True, fla
         baseline_f = 'baseline/basic_sine/'
     elif flag == 'ss':
         baseline_f = 'baseline/shake_sine/'
-    #print(baseline_f)
+    # print(baseline_f)
     if show_other:
-        mat_g = scipy.io.loadmat(baseline_f+'gravity.mat')
-        mat_og = scipy.io.loadmat(baseline_f+'gravity_offset.mat')
-        all_mat = [mat_g, mat_og]  #[mat_g, mat_og]
+        mat_g = scipy.io.loadmat(baseline_f + 'gravity.mat')
+        mat_og = scipy.io.loadmat(baseline_f + 'gravity_offset.mat')
+        all_mat = [mat_g, mat_og]  # [mat_g, mat_og]
         labels = ['g', 'og']
-
 
     counter = 0
     plt.figure(1)
@@ -242,6 +243,15 @@ def arrays_to_dataframe(total_q, total_dq, total_eq, total_edq):
     })
 
 
+def write_info(folder_p, setting, info):
+    f = open(folder_p, 'a')
+    f.write(setting + "  \n")
+    f.write(info)
+    f.write('\n')
+    f.write('\n')
+    f.close()
+
+
 def visual_all(res_true, res_pred, name, c_out):
     fig, axs = plt.subplots(2, math.ceil(c_out / 2), figsize=(12, 6))
     idx = 0
@@ -297,7 +307,7 @@ def generate_ref(flag, tout):
         omega = w + w / Tf * tout
         q1_ref = A * np.sin(omega * tout) - np.pi / 2
         q2_ref = np.pi / 2 * np.cos(np.pi / 8 * (tout + np.pi / 2)) * np.sin(np.pi / 4 * (tout + np.pi / 2))
-        dq1_ref = 1/Tf*np.sin(omega*tout)+A*np.cos(omega*tout)*(2*w/Tf*tout+w)
+        dq1_ref = 1 / Tf * np.sin(omega * tout) + A * np.cos(omega * tout) * (2 * w / Tf * tout + w)
         dq2_ref = np.pi / 2 * -np.pi / 8 * np.sin(np.pi / 4 * (tout + np.pi / 2)) * np.sin(np.pi / 8 * (tout + np.pi / 2)) + np.pi / 2 * np.pi / 4 * np.cos(np.pi / 8 * (tout + np.pi / 2)) * np.cos(
             np.pi / 4 * (tout + np.pi / 2))
     q_ref = np.concatenate((q1_ref, q2_ref), axis=1)
