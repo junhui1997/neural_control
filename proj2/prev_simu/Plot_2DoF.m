@@ -1,0 +1,37 @@
+t1=0:0.0025:32;
+t1=t1';
+
+figure(1);
+subplot(321);
+plot(tout,sin(pi/4*tout)-pi/2,'r',tout,q(:,1),'c','linewidth',1.0);hold on;
+ylabel('\itq\rm_{\rm1} (rad)');
+subplot(323);
+plot(tout,abs(sin(pi/4*tout)-pi/2-q(:,1))*180/pi,'c','linewidth',1.0);hold on; %yaxis([0 20]);
+% plot(t1,abs(e1(:,1))*180/pi,'c',t1,abs(e1(:,1))*180/pi,'c','linewidth',1.0);hold on;
+ylabel('e\itq\rm_{\rm1} (deg)');
+subplot(322);
+plot(tout,pi/2*cos(pi/8*(tout+pi/2)).*sin(pi/4*(tout+pi/2)),'r',tout,q(:,2),'c','linewidth',1.0);hold on;    
+ylabel('\itq\rm_{\rm2} (rad)');
+subplot(324);
+plot(tout,abs(pi/2*cos(pi/8*(tout+pi/2)).*sin(pi/4*(tout+pi/2))-q(:,2))*180/pi,'c','linewidth',1.0);hold on;
+ylabel('e\itq\rm_{\rm2} (deg)');
+subplot(325);
+plot(t1,sTau(:,1),'c','linewidth',1.0);hold on;
+ylabel('\itu\rm_{\rm1} [Nm]');
+subplot(326);
+plot(t1,sTau(:,2),'c','linewidth',1.0);hold on;
+ylabel('\itu\rm_{\rm2} [Nm]');
+
+figure(2);
+subplot(221);                          
+plot(tout,pi/4*cos(pi/4*tout),'r',tout,dq(:,1),'c','linewidth',1.0);hold on;         
+ylabel('d\itq\rm_{\rm1} (rad/s)');
+subplot(223);
+plot(tout,abs(pi/4*cos(pi/4*tout)-dq(:,1)),'c','linewidth',1.0);hold on;
+ylabel('ed\itq\rm_{\rm1} (rad/s)');
+subplot(222);                                                                                              
+plot(tout,pi/2*-pi/8*sin(pi/4*(t+pi/2)).*sin(pi/8*(t+pi/2))+pi/2*pi/4*cos(pi/8*(t+pi/2)).*cos(pi/4*(t+pi/2)),'r',tout,dq(:,2),'c','linewidth',1.0);hold on;         
+ylabel('d\itq\rm_{\rm2} (rad/s)');
+subplot(224);
+plot(tout,abs(pi/2*-pi/8*sin(pi/4*(t+pi/2)).*sin(pi/8*(t+pi/2))+pi/2*pi/4*cos(pi/8*(t+pi/2)).*cos(pi/4*(t+pi/2))-dq(:,2)),'c','linewidth',1.0);hold on;
+ylabel('ed\itq\rm_{\rm2} (rad/s)');

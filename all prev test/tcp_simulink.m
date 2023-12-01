@@ -1,0 +1,37 @@
+example_0413
+close all; clear; clc
+x = 1.1;
+set_param('example_0413','SimulationCommand','stop'); %stop是终止之前的simulation，重新开启一次新的
+set_param('example_0413','SimulationCommand','start'); %直接start之后，如果没有pause就会直接执行到任务的结尾
+set_param('example_0413','SimulationCommand','pause');
+counter = 1;
+sample_rate = 0.2;
+total_t = 1000;
+
+server = tcpip('127.0.0.1', 30000, 'NetworkRole', 'Server','ByteOrder','littleEndian'); %littleEndian
+% 等待客户端连接
+server.OutputBufferSize=100000;
+disp('等待客户端连接...');
+fopen(server);
+disp('客户端已连接');
+
+
+
+counter = 0;
+to_send = [1,0.2,0.3];
+while true
+    if server.BytesAvailable>0
+        set_param('example_0413','SimulationCommand','pause');
+        to_send(1) = 1+counter;
+        fwrite(server,to_send,'double')
+        reveive_data = fread(server, 3,'double');
+        x = reveive_data(1);
+        set_param('example_0413','SimulationCommand','update');
+        set_param('example_0413','SimulationCommand','step'); %step就是单纯的步进一步不需要额外再pause了
+        counter = counter+1;
+        if counter >= total_t/sample_rate
+            set_param('example_0413','SimulationCommand','stop');
+            break;
+        end
+    end
+end
