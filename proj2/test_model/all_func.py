@@ -252,7 +252,7 @@ def write_info(folder_p, setting, info):
     f.close()
 
 
-def visual_all(res_true, res_pred, name, c_out):
+def visual_all(res_true, res_pred, name, c_out, show_plot=1):
     fig, axs = plt.subplots(2, math.ceil(c_out / 2), figsize=(12, 6))
     idx = 0
     # 这里有个bug就是，如果列为1，那么就会导致没有len(axs[0])
@@ -281,7 +281,8 @@ def visual_all(res_true, res_pred, name, c_out):
             idx += 1
 
     plt.savefig(name)
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 def dynamic_adjust(pred, current_epoch, threshold):

@@ -18,7 +18,7 @@ def generate_ref(flag='basic'):
 
 def generate_info():
     return None
-def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path, show_other=True, flag='br'):
+def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path, show_other=True, flag='br', show_plot=1):
     t1 = np.arange(0, T_final + dt, dt)
     t2 = np.arange(0, T_final + 5 * dt, 5 * dt)
     if flag == 'br':
@@ -118,7 +118,8 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
             plt.plot(t2, all_mat[i]['Data_Tau_Log'][:, 1], linewidth=0.5, label=labels[i])
     plt.legend(loc='upper right', fontsize='small')
     plt.savefig(folder_path + '3_.svg', format='svg')
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 def Dynamics_ddq(Torque, q, dq, z):

@@ -6,6 +6,9 @@ import argparse
 from exp.exp_basic import exp_model
 from test_model.dnn import lstm_p
 from test_model import iTransformer
+import warnings
+warnings.filterwarnings("ignore")
+
 
 # online training
 parser = argparse.ArgumentParser(description='neural_pid')
@@ -23,6 +26,7 @@ parser.add_argument('--dropout', type=int, default=0, help='dropout')
 parser.add_argument('--sample_type', type=str, default='log', help='sample type from replay buffer:[linear,log,random,single]')  # single 还没写
 parser.add_argument('--input_type', type=str, default='actual', help='ref or actual')
 parser.add_argument('--activation', type=str, default='gelu', help='activation')
+parser.add_argument('--show_plot', type=int, default=0, help='show plot or not')
 parser.add_argument('--model', type=str, default='lstm', help='type of model')
 
 # useless
@@ -44,6 +48,10 @@ parser.add_argument('--moving_avg', type=int, default=50, help='window size of m
 
 
 args = parser.parse_args()
+if args.minimal_size > args.buffer_size:
+    args.minimal_size = args.buffer_size
+if args.buffer_size < args.batch_size:
+    args.buffer_size = args.batch_size
 setting = '{}_dm{}_el{}_sl{}_pl{}_co{}_bs{}_bfs{}_lr{}_st{}'.format(
     args.model,
     args.d_model,
@@ -115,7 +123,6 @@ while count <= Number_All:  # 60001 or 60000?
             e_pred = pred[:2, :]
             de_pred = pred[2:, :]
             # de_pred = dynamic_adjust(de_pred, counter, 5000)
-            print(e_pred)
             # de_pred = np.array([[0], [0]])
         else:
             e_pred = np.array([[0], [0]])
@@ -150,12 +157,14 @@ while count <= Number_All:  # 60001 or 60000?
 
     T += dt  # 实际时间
     count += 1
-    print(count)
+    if count % 300 == 0:
+        print(count)
+        print(e_pred)
 
 all_pred = total_pred.transpose()[args.seq_len:, :]  # 去除掉最开始没有介入网络的部分
 all_true = np.concatenate((total_eq, total_edq), axis=0).transpose()[args.seq_len:, :]
 
-visual_all(all_true, all_pred, folder_path + 'loss_.png', args.c_out)
+visual_all(all_true, all_pred, folder_path + 'loss_.png', args.c_out, show_plot=args.show_plot)
 # visual plot
 q3_12001 = Data_SS_Log[np.arange(0, 5 * Number_Major, 5), 0]
 q4_12001 = Data_SS_Log[np.arange(0, 5 * Number_Major, 5), 1]
@@ -168,11 +177,12 @@ edq_rms = np.sqrt(np.mean((dq_ref - all_act[:, 2:]) ** 2))
 ep_rms = np.sqrt(np.mean((all_pred - all_true) ** 2))
 eq_target = 0.0002598054130803498
 edq_tarrget = 0.002690652238554081
-write_info("./results/result_rbf.txt", setting, 'eq{}_edq{}_ep{}_'.format(eq_target-eq_rms, edq_tarrget- edq_rms, ep_rms))
+info = 'eq{}_edq{}_ep{}_'.format(eq_target-eq_rms, edq_tarrget- edq_rms, ep_rms)
+write_info("./results/result_rbf.txt", setting, info)
 
 
 
 value_l = [qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, q3_12001, q4_12001, dq3_12001, dq4_12001]
 key_l = ['qd3', 'qd4', 'dqd3', 'dqd4', 'Data_SS_Log', 'Data_Tau_Log', 'Number_Major', 'T_final', 'dt', 'q3_12001', 'q4_12001', 'dq3_12001', 'dq4_12001']
 generate_mat('baseline/basic_rbf', value_l, key_l)
-plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path=folder_path, show_other=True)
+plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path=folder_path, show_other=True, show_plot=args.show_plot)
