@@ -168,7 +168,7 @@ edq_rms = np.sqrt(np.mean((dq_ref - all_act[:, 2:]) ** 2))
 ep_rms = np.sqrt(np.mean((all_pred - all_true) ** 2))
 eq_target = 0.0002598054130803498
 edq_tarrget = 0.002690652238554081
-write_info("./results/online_rbf/result_rbf.txt", setting, 'eq{}_edq{}_ep{}_'.format(eq_target-eq_rms, edq_tarrget- edq_rms, ep_rms))
+write_info("./results/result_rbf.txt", setting, 'eq{}_edq{}_ep{}_'.format(eq_target-eq_rms, edq_tarrget- edq_rms, ep_rms))
 
 
 
