@@ -47,3 +47,35 @@ class lstm_n(nn.Module):
         out = self.projection2(out)
         return out
 
+class lstm_p(nn.Module):
+    """Very simple implementation of LSTM-based time-series classifier."""
+
+    # num_layers – Number of recurrent layers. E.g., setting num_layers=2 would mean stacking two LSTMs
+    # batch_first – If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature).
+    def __init__(self, configs=None):
+        super().__init__()
+        self.input_dim = configs.enc_in  #configs.d_model
+        self.hidden_dim = configs.d_model
+        self.layer_dim = configs.e_layers
+        self.out_dim = configs.c_out
+
+        # 注意这里设置了batch_first所以第一个维度是batch，lstm第二个input是输出的维度，第三个是lstm的层数
+        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.layer_dim, batch_first=True)
+        self.act = F.gelu
+        self.dropout = nn.Dropout(configs.dropout)
+        self.projection_l = nn.Linear(configs.seq_len, configs.pred_len)
+        self.projection_dim = nn.Linear(self.hidden_dim , self.out_dim)
+        #self.projection = nn.Linear(configs.d_model * configs.seq_len, configs.enc_in)
+        init.xavier_uniform_(self.projection_l.weight)
+        init.xavier_uniform_(self.projection_dim.weight)
+
+    # 标准输出 [batch_size, pred_len, c_out]
+    def forward(self, x):
+        # init_hidden并不是魔法函数，是每次循环时候手动执行更新的
+        # https://machinelearningmastery.com/lstm-for-time-series-prediction-in-pytorch/
+        out,  _ = self.lstm(x)
+        out = self.act(out)
+        out = self.dropout(out)
+        out = self.projection_l(out.permute(0, 2, 1)).permute(0, 2, 1)
+        out = self.projection_dim(out)
+        return out

@@ -4,13 +4,15 @@ from test_model.all_func import generate_mat, dynamic_adjust, visual_all, write_
 import os
 import argparse
 from exp.exp_basic import exp_model
-from test_model.dnn import lstm_n
+from test_model.dnn import lstm_p
+from test_model import iTransformer
 
 # online training
 parser = argparse.ArgumentParser(description='neural_pid')
 parser.add_argument('--d_model', type=int, default=48, help='dimension of model')
 parser.add_argument('--e_layers', type=int, default=3, help='num of encoder layers')
 parser.add_argument('--seq_len', type=int, default=20, help='input sequence length')
+parser.add_argument('--pred_len', type=int, default=3, help='prediction length')
 parser.add_argument('--enc_in', type=int, default=4, help='encoder input size')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')  ###
 parser.add_argument('--buffer_size', type=int, default=500, help='batch size')
@@ -20,13 +22,34 @@ parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--dropout', type=int, default=0, help='dropout')
 parser.add_argument('--sample_type', type=str, default='log', help='sample type from replay buffer:[linear,log,random,single]')  # single 还没写
 parser.add_argument('--input_type', type=str, default='actual', help='ref or actual')
+parser.add_argument('--activation', type=str, default='gelu', help='activation')
 parser.add_argument('--model', type=str, default='lstm', help='type of model')
+
+# useless
+parser.add_argument('--embed', type=str, default='none', help='time features encoding, options:[timeF, fixed, learned]')
+parser.add_argument('--d_layers', type=int, default=1, help='useless')
+parser.add_argument('--dec_in', type=int, default=7, help='useless')
+parser.add_argument('--freq', type=str, default='h', help='useless')
+parser.add_argument('--output_attention', action='store_true', help='useless')
+parser.add_argument('--distil', action='store_false', help='useless',default=True)
+# for attention based model
+parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
+parser.add_argument('--factor', type=int, default=1, help='attn factor')
+parser.add_argument('--d_ff', type=int, default=512, help='dimension of fcn')
+# for timesNet
+parser.add_argument('--top_k', type=int, default=5, help='for TimesBlock')
+parser.add_argument('--num_kernels', type=int, default=6, help='for Inception')
+# for serial decompose
+parser.add_argument('--moving_avg', type=int, default=50, help='window size of moving average')
+
+
 args = parser.parse_args()
-setting = '{}_dm{}_el{}_sl{}_co{}_bs{}_bfs{}_lr{}_st{}'.format(
+setting = '{}_dm{}_el{}_sl{}_pl{}_co{}_bs{}_bfs{}_lr{}_st{}'.format(
     args.model,
     args.d_model,
     args.e_layers,
     args.seq_len,
+    args.pred_len,
     args.c_out,
     args.batch_size,
     args.buffer_size,
@@ -38,8 +61,10 @@ folder_path = './results/online_rbf/' + setting + '/'
 if not os.path.exists(folder_path):
     os.makedirs(folder_path)
 
+model_dic = {'lstm': lstm_p,
+             'it': iTransformer.Model}
 
-exps = exp_model(args, lstm_n)
+exps = exp_model(args, model_dic[args.model])
 
 # controller
 Number_All = 60001
@@ -77,14 +102,15 @@ while count <= Number_All:  # 60001 or 60000?
         if i > args.seq_len + 1:
             if args.input_type == 'actual':
                 total_info = np.concatenate((total_q.transpose()[-args.seq_len - 1:-1, :], total_dq.transpose()[-args.seq_len - 1:-1, :]), axis=1)[:, :args.enc_in]
-            total_label = np.concatenate((total_eq.transpose()[-1, :], total_edq.transpose()[-1, :]))
+            total_label = np.concatenate((total_eq.transpose()[-args.pred_len:, :], total_edq.transpose()[-args.pred_len:, :]), axis=1)
             exps.update_buffer(total_info, total_label)
         if exps.get_buffer_size() >= args.minimal_size:
             exps.train_one_epoch()
             if args.input_type == 'actual':
                 current_inputs = np.concatenate((total_q.transpose()[-args.seq_len:, :], total_dq.transpose()[-args.seq_len:, :]), axis=1)[:, :args.enc_in]
             # current_inputs = apply_norm(current_inputs)
-            pred = exps.pred(current_inputs)
+            # [c_out, pred_len, 1]
+            pred = exps.pred(current_inputs)[:, 0, :]
             pred = dynamic_adjust(pred, i, 5000)  # 大学习率和最开始输出控制
             e_pred = pred[:2, :]
             de_pred = pred[2:, :]
