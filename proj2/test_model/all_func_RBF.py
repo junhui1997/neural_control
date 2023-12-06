@@ -385,7 +385,7 @@ def Controller(W, e13_com, e14_com, qd3, qd4, dqd3, dqd4, ddqd3, ddqd4, sq, q, d
 
     # 误差信号
     # e1 = sq - qd
-    e1 = q - (qd - 0.5 * e1_com)
+    e1 = q - (qd - 1 * e1_com)
     de1 = dq - dqd
 
     # 虚拟控制器
