@@ -40,3 +40,12 @@ eq0.0_edq0.0_ep0.0023470366708143826_
 it_dm48_el1_sl5_pl1_co4_bs16_bfs200_lr1e-06_stlog  
 eq0.0_edq0.0_ep0.010688902097681608_
 
+it_dm48_el1_sl5_pl1_co4_bs16_bfs200_lr1e-06_stlog  
+eq0.0_edq0.0_ep0.006609209558630226_
+
+it_dm48_el1_sl5_pl1_co4_bs16_bfs200_lr1e-06_stlog  
+eq0.0_edq0.0_ep0.04629972903357982_
+
+it_dm48_el1_sl5_pl1_co4_bs16_bfs200_lr1e-06_stlog  
+eq0.0_edq0.0_ep0.03567485666626338_
+

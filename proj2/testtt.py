@@ -1,6 +1,6 @@
 import numpy as np
 from test_model.all_func_RBF import Encoder, Controller, Dynamics_W, Dynamics_q, Dynamics_dq, Dynamics_ddq, Dynamics_z, generate_ref, plot_data, generate_info
-from test_model.all_func import generate_mat, dynamic_adjust, visual_all, write_info
+from test_model.all_func import generate_mat, dynamic_adjust, visual_all, write_info, arrays_to_dataframe
 import os
 import argparse
 from exp.exp_basic import exp_model
@@ -71,7 +71,7 @@ if not os.path.exists(folder_path):
 
 model_dic = {'lstm': lstm_p,
              'it': iTransformer.Model,
-             'if': iTransformer_f.Model,
+             'itf': iTransformer_f.Model,
              'FiLM': FiLM.Model}
 
 exps = exp_model(args, model_dic[args.model])
@@ -201,6 +201,10 @@ generate_mat('baseline/basic_rbf', value_l, key_l)
 value_l2 = [all_pred, all_true]
 key_l2 = ['all_pred', 'all_true']
 generate_mat(folder_path, value_l2, key_l2)
+
+# store data for offline training
+df = arrays_to_dataframe(q_ref, dq_ref, total_eq.transpose(), total_edq.transpose())
+# df.to_pickle('data/pd_rbf.pkl')
 
 # visualize prediction and control data
 visual_all(all_true, all_pred, folder_path + 'loss_.png', args.c_out, show_plot=args.show_plot)

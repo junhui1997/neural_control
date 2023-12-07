@@ -21,7 +21,7 @@ class Model(nn.Module):
         # Encoder
         self.encoder = Encoder(
             [
-                EncoderLayer_d(
+                EncoderLayer_f(
                     AttentionLayer(
                         FullAttention(False, configs.factor, attention_dropout=configs.dropout,
                                       output_attention=configs.output_attention), configs.d_model, configs.n_heads),

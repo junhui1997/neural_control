@@ -160,7 +160,7 @@ class EncoderLayer_f(nn.Module):
         self.is_inversed = is_inversed
         if is_inversed:
             # 注意如果是有x_mark的c_out要加一定数值，ETT的是加5
-            self.fe = feature_enhanced(in_channels=args.c_out, out_channels=args.c_out, seq_len=d_model)
+            self.fe = feature_enhanced(in_channels=args.enc_in, out_channels=args.enc_in, seq_len=d_model)
         else:
             self.fe = feature_enhanced(in_channels=d_model, out_channels=d_model, seq_len=args.seq_len)
 
@@ -201,9 +201,9 @@ class EncoderLayer_d(nn.Module):
         self.activation = F.relu if activation == "relu" else F.gelu
         self.is_inversed = is_inversed
         if is_inversed:
-            # 注意如果是有x_mark的c_out要加一定数值，ETT的是加5
+            # 注意如果是有x_mark的enc_in要加一定数值，ETT的是加5
             # 传入args只是为了move_avg
-            self.fd = feature_decompose(in_channels=args.c_out, seq_len=d_model, pred_len=d_model, configs=args)
+            self.fd = feature_decompose(in_channels=args.enc_in, seq_len=d_model, pred_len=d_model, configs=args)
         else:
             self.fd = feature_decompose(in_channels=d_model, seq_len=args.seq_len, pred_len=args.seq_len, configs=args)
 
