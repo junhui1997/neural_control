@@ -14,6 +14,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len
+        self.c_out = configs.c_out
         self.output_attention = configs.output_attention
         # Embedding
         self.enc_embedding = DataEmbedding_inverted(configs.seq_len, configs.d_model, configs.embed, configs.freq,
@@ -55,7 +56,7 @@ class Model(nn.Module):
         enc_out, attns = self.encoder(enc_out, attn_mask=None)
 
         # 从d_model(从seq_len得到）投影到pred_len
-        dec_out = self.projection(enc_out).permute(0, 2, 1)[:, :, :N]
+        dec_out = self.projection(enc_out).permute(0, 2, 1)[:, :, :self.c_out]
         # # # De-Normalization from Non-stationary Transformer
         # dec_out = (dec_out - self.affine_bias)/(self.affine_weight + 1e-10)
         # dec_out = dec_out * (stdev[:, 0, :].unsqueeze(1).repeat(1, self.pred_len, 1))

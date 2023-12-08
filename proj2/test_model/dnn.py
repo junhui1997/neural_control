@@ -79,3 +79,30 @@ class lstm_p(nn.Module):
         out = self.projection_l(out.permute(0, 2, 1)).permute(0, 2, 1)
         out = self.projection_dim(out)
         return out
+
+
+class bp_p(nn.Module):
+    """Very simple implementation of LSTM-based time-series classifier."""
+
+    def __init__(self, configs=None):
+        super().__init__()
+        self.layer = configs.e_layers
+        self.input_l = nn.Linear(configs.seq_len*configs.enc_in, configs.d_model)
+        hidden_l = []
+        for i in range(self.layer):
+            hidden_l.append(nn.Linear(configs.d_model, configs.d_model))
+            hidden_l.append(nn.ReLU())
+        self.bp = nn.ModuleList(hidden_l)
+        self.output_l = nn.Linear(configs.d_model, configs.pred_len*configs.c_out)
+        self.pred_len = configs.pred_len
+        self.c_out = configs.c_out
+    def forward(self, x):
+        # [batch_size,seq_len,enc_in]->[batch_size,seq_len*enc_in]
+        batch_size = x.shape[0]
+        x = x.view(batch_size, -1)
+        x = self.input_l(x)
+        for i in range(self.layer):
+            x = self.bp[i](x)
+        x = self.output_l(x)
+        x = x.reshape(batch_size, self.pred_len, self.c_out)
+        return x
