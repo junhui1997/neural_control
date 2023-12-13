@@ -6,6 +6,7 @@ from data_provider.data_loader_rbf import Dataset_neural_pd
 from test_model.all_func import visual_all, write_info
 from test_model.dnn import lstm_p, bp_p
 from test_model import iTransformer, FiLM, iTransformer_f
+import torch.optim.lr_scheduler as lr_scheduler
 import torch.nn as nn
 import numpy as np
 import torch
@@ -80,12 +81,14 @@ net = model_dic[args.model](args).float().cuda()
 
 # 定义优化器和损失函数
 optim = torch.optim.AdamW(net.parameters(net), lr=args.lr)
+scheduler = lr_scheduler.ReduceLROnPlateau(optim, 'min', factor=0.8, patience=1)
+# scheduler = lr_scheduler.CosineAnnealingLR(optim, T_max=3, eta_min=0.0001)
 Loss = nn.MSELoss()
 # Loss = nn.L1Loss()
 best_loss = 100
 # 下面开始训练：
 # 一共训练 1000次
-for epoch in range(30):
+for epoch in range(100):
     train_loss = []
     # print(epoch)
     for batch_x, batch_y in dataloader:
@@ -99,6 +102,14 @@ for epoch in range(30):
         train_loss.append(loss.item())
     # 每100次 的时候打印一次日志
     total_loss = np.average(train_loss)
+
+    # update lr
+    lr_prev = optim.param_groups[0]['lr']
+    scheduler.step(total_loss)
+    lr = optim.param_groups[0]['lr']
+    if lr != lr_prev:
+        print('Updating learning rate to {}'.format(lr))
+
     if (epoch + 1) % 1 == 0:
         print("step: {0} , loss: {1}".format(epoch + 1, total_loss))
 

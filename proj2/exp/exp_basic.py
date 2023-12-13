@@ -3,15 +3,17 @@ import torch.nn.functional as F
 import torch
 from test_model.dnn import lstm_n
 from test_model.block import ReplayBuffer
+import torch.optim.lr_scheduler as lr_scheduler
 
 class exp_model:
-    ''' 经验回放池 '''
+    ''' model for online training'''
 
     def __init__(self, args, Model ):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.replay_buffer = ReplayBuffer(args.buffer_size)
         self.model = Model(args).float().to(self.device)
         self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', factor=0.999, patience=200)
         self.args = args
 
     def train_one_epoch(self):
@@ -31,6 +33,12 @@ class exp_model:
         # print(loss.item())
         loss.backward()
         self.optimizer.step()
+        lr_prev = self.optimizer.param_groups[0]['lr']
+        self.scheduler.step(loss.item())
+        lr = self.optimizer.param_groups[0]['lr']
+        print(loss.item())
+        if lr != lr_prev:
+            print('Updating learning rate to {}'.format(lr))
 
     def pred(self, current_inputs):
         self.model.eval()

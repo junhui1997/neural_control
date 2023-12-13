@@ -19,16 +19,21 @@ parser.add_argument('--seq_len', type=int, default=20, help='input sequence leng
 parser.add_argument('--pred_len', type=int, default=3, help='prediction length')
 parser.add_argument('--enc_in', type=int, default=4, help='encoder input size')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')  ###
-parser.add_argument('--buffer_size', type=int, default=200, help='batch size')
-parser.add_argument('--minimal_size', type=int, default=128, help='should be larger than batch size,and control weather start training')
 parser.add_argument('--c_out', type=int, default=4, help='encoder input size')
-parser.add_argument('--lr', type=float, default=0.000001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--dropout', type=int, default=0, help='dropout')
 parser.add_argument('--sample_type', type=str, default='log', help='sample type from replay buffer:[linear,log,random,single]')  # single 还没写
 parser.add_argument('--input_type', type=str, default='actual', help='ref or actual')
 parser.add_argument('--activation', type=str, default='gelu', help='activation')
 parser.add_argument('--show_plot', type=int, default=0, help='show plot or not')
 parser.add_argument('--model', type=str, default='lstm', help='type of model')
+
+# for controller
+parser.add_argument('--enable_net', type=int, default=1, help='whether add net or not')
+parser.add_argument('--buffer_size', type=int, default=200, help='batch size')
+parser.add_argument('--minimal_size', type=int, default=128, help='should be larger than batch size,and control weather start training')
+parser.add_argument('--scale', type=int, default=10000, help='scale large the network output')
+
 
 # useless
 parser.add_argument('--embed', type=str, default='none', help='time features encoding, options:[timeF, fixed, learned]')
@@ -85,7 +90,7 @@ i = 0  # python的i取值要注意 change
 T = 0
 dt = 0.0005
 nodes = 13
-to_train = 600
+to_train = 100
 q = np.array([0.005, -0.005]).reshape(-1, 1)  # initial value
 dq = np.array([-0.1705, 0.1576]).reshape(-1, 1)
 Weights = np.zeros((2 * nodes, 1)).reshape(-1, 1)
@@ -114,44 +119,46 @@ while count <= Number_All:  # 60001 or 60000?
             if args.input_type == 'actual':
                 total_info = np.concatenate((total_q.transpose()[-args.seq_len - 1:-1, :], total_dq.transpose()[-args.seq_len - 1:-1, :]), axis=1)[:, :args.enc_in]
             total_label = np.concatenate((total_eq.transpose()[-args.pred_len:, :], total_edq.transpose()[-args.pred_len:, :]), axis=1)
+            total_label = total_label*args.scale
             exps.update_buffer(total_info, total_label)
-        if exps.get_buffer_size() >= args.minimal_size:
+        if exps.get_buffer_size() >= args.minimal_size and args.enable_net:
             exps.train_one_epoch()
             if args.input_type == 'actual':
                 current_inputs = np.concatenate((total_q.transpose()[-args.seq_len:, :], total_dq.transpose()[-args.seq_len:, :]), axis=1)[:, :args.enc_in]
             # current_inputs = apply_norm(current_inputs)
             # [c_out, pred_len, 1]
             pred = exps.pred(current_inputs)[:, 0, :]
-            pred = dynamic_adjust(pred, i, 5000)  # 大学习率和最开始输出控制
-            e_pred = pred[:2, :]
-            de_pred = pred[2:, :]
+            pred = pred/args.scale
+            pred_dy = dynamic_adjust(pred, i, 500)  # 大学习率和最开始输出控制
+            e_pred = pred_dy[:2, :]
+            de_pred = pred_dy[2:, :]
             # de_pred = dynamic_adjust(de_pred, counter, 5000)
             # de_pred = np.array([[0], [0]])
         else:
             e_pred = np.array([[0], [0]])
             de_pred = np.array([[0], [0]])
             pred = np.array([[0] for i in range(args.c_out)])
-
-        q_sample = Encoder(q)
-        # Torque = Controller(Weights, e_pred[0, 0], e_pred[1, 0], qd3[i], qd4[i], dqd3[i], dqd4[i], ddqd3[i], ddqd4[i], q_sample, q, dq)
-        Torque = Controller(Weights, 0, 0, qd3[i], qd4[i], dqd3[i], dqd4[i], ddqd3[i], ddqd4[i], q_sample, q, dq)
+        e13_com = e_pred[0, 0]
+        e14_com = e_pred[1, 0]
         # if i == 0:
         #     e13_com = 0
         #     e14_com = 0
         # else:
         #     e13_com = total_eq[0, -1]
         #     e14_com = total_eq[1, -1]
-        # Torque = Controller(Weights, e13_com, e14_com, qd3[i], qd4[i], dqd3[i], dqd4[i], ddqd3[i], ddqd4[i], q_sample, q, dq)
+        q_sample = Encoder(q)
+        # Torque = Controller(Weights, 0, 0, qd3[i], qd4[i], dqd3[i], dqd4[i], ddqd3[i], ddqd4[i], q_sample, q, dq)
+        Torque = Controller(Weights, e13_com, e14_com, qd3[i], qd4[i], dqd3[i], dqd4[i], ddqd3[i], ddqd4[i], q_sample, q, dq)
 
         dq_OtherSteps = dq
-        Weights = Dynamics_W(Weights, 0, 0, qd3[i], qd4[i], dqd3[i], dqd4[i], q_sample, dq, dt)
+        Weights = Dynamics_W(Weights, e13_com, e14_com, qd3[i], qd4[i], dqd3[i], dqd4[i], q_sample, dq, dt)
         ddq = Dynamics_ddq(Torque, q, dq, z)
         z = Dynamics_z(dq, z, dt)
         dq = Dynamics_dq(ddq, dq, dt)
         q = Dynamics_q(dq, q, dt)
         Data_Tau_Log[i, 0:2] = [Torque[2], Torque[3]]  # change
         #
-        e_q_t = q - q_ref[i].reshape(-1, 1)
+        e_q_t = q_sample - q_ref[i].reshape(-1, 1)
         e_dq_t = dq - dq_ref[i].reshape(-1, 1)
         total_eq = np.concatenate((total_eq, e_q_t), axis=1)
         total_edq = np.concatenate((total_edq, e_dq_t), axis=1)
@@ -160,7 +167,7 @@ while count <= Number_All:  # 60001 or 60000?
         total_pred = np.concatenate((total_pred, pred), axis=1)
         i += 1  # i的终止值是12001
     else:
-        Weights = Dynamics_W(Weights, 0, 0, qd3[i - 1], qd4[i - 1], dqd3[i - 1], dqd4[i - 1], q_sample, dq_OtherSteps, dt)
+        Weights = Dynamics_W(Weights, e13_com, e14_com, qd3[i - 1], qd4[i - 1], dqd3[i - 1], dqd4[i - 1], q_sample, dq_OtherSteps, dt)
         ddq = Dynamics_ddq(Torque, q, dq, z)
         z = Dynamics_z(dq, z, dt)
         dq = Dynamics_dq(ddq, dq, dt)
@@ -170,7 +177,7 @@ while count <= Number_All:  # 60001 or 60000?
     count += 1
     if count % 300 == 0:
         print(count)
-        print(e_pred)
+        # print(e_pred)
 
 all_pred = total_pred.transpose()[to_train:, :]  # 去除掉最开始没有介入网络的部分
 all_true = np.concatenate((total_eq, total_edq), axis=0).transpose()[to_train:, :]
@@ -198,8 +205,8 @@ key_l = ['qd3', 'qd4', 'dqd3', 'dqd4', 'Data_SS_Log', 'Data_Tau_Log', 'Number_Ma
 generate_mat('baseline/basic_rbf', value_l, key_l)
 
 # store model prediction data
-value_l2 = [all_pred, all_true]
-key_l2 = ['all_pred', 'all_true']
+value_l2 = [all_pred, all_true]+value_l
+key_l2 = ['all_pred', 'all_true']+key_l
 generate_mat(folder_path, value_l2, key_l2)
 
 # store data for offline training

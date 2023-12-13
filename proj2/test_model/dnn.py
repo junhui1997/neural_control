@@ -91,7 +91,7 @@ class bp_p(nn.Module):
         hidden_l = []
         for i in range(self.layer):
             hidden_l.append(nn.Linear(configs.d_model, configs.d_model))
-            hidden_l.append(nn.ReLU())
+            hidden_l.append(nn.Sigmoid()) #nn.ReLU() # nn.ELU() # nn.Tanh()
         self.bp = nn.ModuleList(hidden_l)
         self.output_l = nn.Linear(configs.d_model, configs.pred_len*configs.c_out)
         self.pred_len = configs.pred_len

@@ -16,8 +16,11 @@ def generate_ref(flag='basic'):
 
     return qd3, qd4, dqd3, dqd4, ddqd3, ddqd4
 
+
 def generate_info():
     return None
+
+
 def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path, show_other=True, flag='br', show_plot=1):
     t1 = np.arange(0, T_final + dt, dt)
     t2 = np.arange(0, T_final + 5 * dt, 5 * dt)
@@ -25,8 +28,9 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
         baseline_f = 'baseline/basic_rbf/'
     if show_other:
         mat_b = scipy.io.loadmat(baseline_f + 'basic.mat')
-        all_mat = [mat_b]  # [mat_g, mat_og]
-        labels = ['basic']
+        mat_offset = scipy.io.loadmat(baseline_f + 'matlab_offset.mat')
+        all_mat = [mat_b]  # [mat_b, mat_offset]
+        labels = ['basic']  # ['basic', 'offset']
 
     plt.figure(1, figsize=(12, 8))
 
@@ -47,7 +51,7 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
     plt.legend(loc='upper right', fontsize='small')
 
     plt.subplot(223)
-    plt.plot(t2, dqd3, 'k', linewidth=0.5,label='ref')
+    plt.plot(t2, dqd3, 'k', linewidth=0.5, label='ref')
     plt.plot(t1, Data_SS_Log[:, 2], 'g--', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
@@ -75,28 +79,28 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
     # b = np.random.rand(12000)
     # c = a - b
     # c.shape c是（12000,12000），这里会导致数据爆炸
-    plt.plot(t2, np.abs(qd3.reshape(-1) - q3_12001) * 180 / np.pi, 'g', linewidth=0.5, label='our')
+    plt.plot(t2, np.abs(qd3.reshape(-1) - q3_12001) * 180 / np.pi, 'r', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
             plt.plot(t2, np.abs(qd3.reshape(-1) - all_mat[i]['q3_12001'].reshape(-1)) * 180 / np.pi, linewidth=0.5, label=labels[i])
     plt.legend(loc='upper right', fontsize='small')
 
     plt.subplot(222)
-    plt.plot(t2, np.abs(qd4.reshape(-1) - q4_12001) * 180 / np.pi, 'g', linewidth=0.5, label='our')
+    plt.plot(t2, np.abs(qd4.reshape(-1) - q4_12001) * 180 / np.pi, 'r', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
             plt.plot(t2, np.abs(qd4.reshape(-1) - all_mat[i]['q4_12001'].reshape(-1)) * 180 / np.pi, linewidth=0.5, label=labels[i])
     plt.legend(loc='upper right', fontsize='small')
 
     plt.subplot(223)
-    plt.plot(t2, np.abs(dqd3.reshape(-1) - dq3_12001), 'g', linewidth=0.5, label='our')
+    plt.plot(t2, np.abs(dqd3.reshape(-1) - dq3_12001), 'r', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
             plt.plot(t2, np.abs(dqd3.reshape(-1) - all_mat[i]['dq3_12001'].reshape(-1)), linewidth=0.5, label=labels[i])
     plt.legend(loc='upper right', fontsize='small')
 
     plt.subplot(224)
-    plt.plot(t2, np.abs(dqd4.reshape(-1) - dq4_12001), 'g', linewidth=0.5, label='our')
+    plt.plot(t2, np.abs(dqd4.reshape(-1) - dq4_12001), 'r', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
             plt.plot(t2, np.abs(dqd4.reshape(-1) - all_mat[i]['dq4_12001'].reshape(-1)), linewidth=0.5, label=labels[i])
@@ -105,14 +109,14 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
 
     plt.figure(3, figsize=(12, 8))
     plt.subplot(221)
-    plt.plot(t2, Data_Tau_Log[:, 0], 'g', linewidth=0.5, label='our')
+    plt.plot(t2, Data_Tau_Log[:, 0], 'r', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
             plt.plot(t2, all_mat[i]['Data_Tau_Log'][:, 0], linewidth=0.5, label=labels[i])
     plt.legend(loc='upper right', fontsize='small')
 
     plt.subplot(222)
-    plt.plot(t2, Data_Tau_Log[:, 1], 'g', linewidth=0.5, label='our')
+    plt.plot(t2, Data_Tau_Log[:, 1], 'r', linewidth=0.5, label='our')
     if show_other:
         for i in range(len(all_mat)):
             plt.plot(t2, all_mat[i]['Data_Tau_Log'][:, 1], linewidth=0.5, label=labels[i])
@@ -385,7 +389,7 @@ def Controller(W, e13_com, e14_com, qd3, qd4, dqd3, dqd4, ddqd3, ddqd4, sq, q, d
 
     # 误差信号
     # e1 = sq - qd
-    e1 = q - (qd - 1 * e1_com)
+    e1 = sq - (qd - 0.5 * e1_com)
     de1 = dq - dqd
 
     # 虚拟控制器
@@ -495,7 +499,7 @@ def Dynamics_W(W, e13_com, e14_com, qd3, qd4, dqd3, dqd4, sq, dq, dt):
     dqd = np.array([dqd3, dqd4]).reshape(-1, 1)
 
     #
-    e1 = sq - qd
+    e1 = sq - (qd - 0.5 * e1_com)
     miu = -K1 @ e1 + dqd
     e2 = dq - miu
     e3 = K2 @ e1 + e2

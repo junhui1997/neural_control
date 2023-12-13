@@ -68,7 +68,7 @@ while counter < total_epoch:
     dq_init = dq
     q_init = q
     counter += 1
-    total_edq = np.concatenate((total_edq, e_q), axis=1)
+    total_edq = np.concatenate((total_edq, e_dq), axis=1)
     total_eq = np.concatenate((total_eq, e_q), axis=1)
     total_dq = np.concatenate((total_dq, dq), axis=1)
     total_q = np.concatenate((total_q, q), axis=1)
@@ -83,8 +83,8 @@ total_edq = total_edq.transpose()
 sTau = total_u.transpose()
 # df = arrays_to_dataframe(total_q, total_dq, total_eq, total_edq)
 df = arrays_to_dataframe(q_ref[:-1, :], dq_ref[:-1, :], total_eq, total_edq)
-df.to_pickle('data/pd_ref_train_4x.pkl')
+df.to_pickle('data/pd_ref_train.pkl')
 q = total_q
 dq = total_dq
 tout = np.linspace(0, 32, num=len(t1)) #不使用np速度回很慢
-plot_all(q, dq, sTau, tout, folder_path,False)
+plot_all(q, dq, sTau, tout, q_ref, dq_ref, folder_path)

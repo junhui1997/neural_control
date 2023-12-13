@@ -13,7 +13,7 @@ class Dataset_neural_pd(Dataset):
         # self.df_raw = pd.read_pickle(folder + 'pd_ref_train.pkl')
         self.df_raw = pd.read_pickle(folder + 'pd_rbf.pkl')
         self.df_raw['t'] = [1/12000*i for i in range(len(self.df_raw))]
-        self.df_raw = self.df_raw[600:]
+        self.df_raw = self.df_raw[300:]
         self.len_df = len(self.df_raw)
         self.args = args
         a = 1
@@ -30,10 +30,10 @@ class Dataset_neural_pd(Dataset):
         # seq_y_mark = self.data_stamp_y
 
         # data [4,] label [2,]
-        data = self.df_raw[['q1', 'q2', 'dq1', 'dq2', 't']].iloc[index:index + self.args.seq_len].to_numpy().astype('float64')   # 'q1', 'q2', 'dq1', 'dq2', 't'
-        label = self.df_raw[['eq1', 'eq2', 'edq1', 'edq2']].iloc[index + self.args.seq_len:index +self.args.seq_len+self.args.pred_len].to_numpy().astype('float64')
-        label = label * 100
-        data = apply_norm(data)
+        data = self.df_raw[['q1', 'q2', 'dq1', 'dq2', 't'][:self.args.enc_in]].iloc[index:index + self.args.seq_len].to_numpy().astype('float64')   # 'q1', 'q2', 'dq1', 'dq2', 't'
+        label = self.df_raw[['eq1', 'eq2', 'edq1', 'edq2'][:self.args.c_out]].iloc[index + self.args.seq_len:index +self.args.seq_len+self.args.pred_len].to_numpy().astype('float64')
+        label = label * 10000
+        # data = apply_norm(data)
         data = torch.from_numpy(data)  # 展平时候是沿着行的，为了实现p_1,p_2,p_3,v_1,v_2,v_3
         label = torch.from_numpy(label)
         # if index < self.prev_len:
