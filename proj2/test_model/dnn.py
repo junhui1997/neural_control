@@ -70,6 +70,7 @@ class lstm_p(nn.Module):
         init.xavier_uniform_(self.projection_dim.weight)
 
     # 标准输出 [batch_size, pred_len, c_out]
+    # 输入[batch_size,seq_len,d_model]
     def forward(self, x):
         # init_hidden并不是魔法函数，是每次循环时候手动执行更新的
         # https://machinelearningmastery.com/lstm-for-time-series-prediction-in-pytorch/

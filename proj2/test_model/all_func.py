@@ -211,6 +211,7 @@ def plot_all(q, dq, sTau, tout, q_ref, dq_ref, folder_path, show_other=True, fla
     plt.ylabel(r'$e\dot{q}_2$ (rad/s)')
     plt.savefig(folder_path + 'vel_{}.svg'.format(counter), format='svg')
     plt.show()
+    plt.clf()
 
 
 def arrays_to_dataframe(total_q, total_dq, total_eq, total_edq):
@@ -283,6 +284,7 @@ def visual_all(res_true, res_pred, name, c_out, show_plot=1):
     plt.savefig(name)
     if show_plot:
         plt.show()
+    plt.clf()
 
 
 def dynamic_adjust(pred, current_epoch, threshold):

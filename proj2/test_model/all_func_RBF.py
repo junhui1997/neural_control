@@ -32,6 +32,7 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
         all_mat = [mat_b]  # [mat_b, mat_offset]
         labels = ['basic']  # ['basic', 'offset']
 
+
     plt.figure(1, figsize=(12, 8))
 
     plt.subplot(221)
@@ -124,6 +125,7 @@ def plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_f
     plt.savefig(folder_path + '3_.svg', format='svg')
     if show_plot:
         plt.show()
+    plt.clf()
 
 
 def Dynamics_ddq(Torque, q, dq, z):

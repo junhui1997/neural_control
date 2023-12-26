@@ -1,4 +1,5 @@
-load('MAT_Input_Ref_DesiredJointsTrajForSpiralCircle_ClosedLoopCode.mat')
+clear all;
+load('MAT_Input_Ref_DesiredJointsTrajForSpiralCircle_ClosedLoopCode.mat');
 global Delta dt ddq_max dq_Max K1 K2 K3 rho_11 rho_12 rho_31 rho_32 nodes Tau11 Tau12 eta1 b c
 % 1)基本设置
 Delta=2*pi/2^19; % 编码器
@@ -18,21 +19,23 @@ c=[-30 -25 -20 -15 -10 -5 0 5 10 15 20 25 30;
 
 % Initialization
 Number_All=60001;Number_Major=12001;T_final=30;
-count=1;i=1;T=0;q=[0.005;-0.005];dq=[-0.1705;0.1576];Weights=zeros(2*nodes,1);z=[0;0;0;0;0;0];
+count=1;i=1;T=0;q=[0.005;-0.005];dq=[-0.1705;0.1576];Weights=zeros(2*nodes,1);z=[0;0;0;0;0;0];exe1=[0;0;0;0];
 %数据存储
 Data_SS_Log=zeros(60001,4);Data_Tau_Log=zeros(Number_Major,2);
 
 %% main function
 while count<=Number_All   % 60001 or 60000?
-        count
+        count;
         Data_SS_Log(count,1:2)=[q(1) q(2)]; % 数据存储
         Data_SS_Log(count,3:4)=[dq(1) dq(2)]; % 数据存储 
         if rem(count-1,5)==0 % MajorSteps
+                exe1_OtherSteps = exe1;
                 q_sample = Encoder(q);
-                Torque = Controller(Weights,0,0,qd3(i),qd4(i),dqd3(i),dqd4(i),ddqd3(i),ddqd4(i),q_sample,q,dq);
-%                 Torque_OtherSteps = Torque;
+                Torque = Controller(exe1,Weights,0,0,qd3(i),qd4(i),dqd3(i),dqd4(i),ddqd3(i),ddqd4(i),q_sample,q,dq);
+                Torque_OtherSteps = Torque;
                 dq_OtherSteps = dq;
-                Weights = Dynamics_W(Weights,0,0,qd3(i),qd4(i),dqd3(i),dqd4(i),q_sample,dq);
+                Weights = Dynamics_W(exe1,Weights,0,0,qd3(i),qd4(i),dqd3(i),dqd4(i),q_sample,dq);
+                exe1 = [q_sample - [qd3(i);qd4(i)];dq - [dqd3(i);dqd4(i)]];
                 ddq = Dynamics_ddq(Torque,q,dq,z);
                 z = Dynamics_z(dq,z);
                 dq = Dynamics_dq(ddq,dq);
@@ -40,7 +43,7 @@ while count<=Number_All   % 60001 or 60000?
                 Data_Tau_Log(i,1:2)=[Torque(3) Torque(4)];
                 i=i+1;   % i的终止值是12001
         else
-                Weights = Dynamics_W(Weights,0,0,qd3(i-1),qd4(i-1),dqd3(i-1),dqd4(i-1),q_sample,dq_OtherSteps);
+                Weights = Dynamics_W(exe1_OtherSteps,Weights,0,0,qd3(i-1),qd4(i-1),dqd3(i-1),dqd4(i-1),q_sample,dq_OtherSteps);
                 ddq = Dynamics_ddq(Torque,q,dq,z);
                 z = Dynamics_z(dq,z);
                 dq = Dynamics_dq(ddq,dq);
@@ -52,10 +55,10 @@ end
 
 t1=0:dt:T_final;t2=0:5*dt:T_final;
 figure(1);
-subplot(221);plot(t2,qd3,'k',t1,Data_SS_Log(:,1),'g--','linewidth',1.0);hold on;
-subplot(222);plot(t2,qd4,'k',t1,Data_SS_Log(:,2),'g--','linewidth',1.0);hold on;
-subplot(223);plot(t2,dqd3,'k',t1,Data_SS_Log(:,3),'g--','linewidth',1.0);hold on;
-subplot(224);plot(t2,dqd4,'k',t1,Data_SS_Log(:,4),'g--','linewidth',1.0);hold on;
+subplot(221);plot(t2,qd3,'k',t1,Data_SS_Log(:,1),'g--','linewidth',1.5);hold on;
+subplot(222);plot(t2,qd4,'k',t1,Data_SS_Log(:,2),'g--','linewidth',1.5);hold on;
+subplot(223);plot(t2,dqd3,'k',t1,Data_SS_Log(:,3),'g--','linewidth',1.5);hold on;
+subplot(224);plot(t2,dqd4,'k',t1,Data_SS_Log(:,4),'g--','linewidth',1.5);hold on;
 q3_12001=zeros(Number_Major,1);q4_12001=zeros(Number_Major,1);dq3_12001=zeros(Number_Major,1);dq4_12001=zeros(Number_Major,1);
 for j=1:1:Number_Major
     q3_12001(j)=Data_SS_Log(5*(j-1)+1,1);
@@ -64,13 +67,13 @@ for j=1:1:Number_Major
     dq4_12001(j)=Data_SS_Log(5*(j-1)+1,4);
 end
 figure(2);
-subplot(221);plot(t2,abs(qd3-q3_12001)*180/pi,'g','linewidth',1.0);hold on;
-subplot(222);plot(t2,abs(qd4-q4_12001)*180/pi,'g','linewidth',1.0);hold on;
-subplot(223);plot(t2,abs(dqd3-dq3_12001),'g','linewidth',1.0);hold on;
-subplot(224);plot(t2,abs(dqd4-dq4_12001),'g','linewidth',1.0);hold on;
+subplot(221);plot(t2,abs(qd3-q3_12001)*180/pi,'k','linewidth',1.5);hold on;
+subplot(222);plot(t2,abs(qd4-q4_12001)*180/pi,'k','linewidth',1.5);hold on;
+subplot(223);plot(t2,abs(dqd3-dq3_12001),'k','linewidth',1.5);hold on;
+subplot(224);plot(t2,abs(dqd4-dq4_12001),'k','linewidth',1.5);hold on;
 figure(3);
-subplot(221);plot(t2,Data_Tau_Log(:,1),'g','linewidth',1.0);hold on;
-subplot(222);plot(t2,Data_Tau_Log(:,2),'g','linewidth',1.0);hold on;
+subplot(221);plot(t2,Data_Tau_Log(:,1),'k','linewidth',1.5);hold on;
+subplot(222);plot(t2,Data_Tau_Log(:,2),'k','linewidth',1.5);hold on;
 
 %% 加速度求解
 function ddq_out = Dynamics_ddq(Torque,q,dq,z)
@@ -198,7 +201,7 @@ end
 end
 
 %% 控制力矩计算
-function Tau = Controller(W,e13_com,e14_com,qd3,qd4,dqd3,dqd4,ddqd3,ddqd4,sq,q,dq)
+function Tau = Controller(exe1,W,e13_com,e14_com,qd3,qd4,dqd3,dqd4,ddqd3,ddqd4,sq,q,dq)
 global K1 K2 K3 rho_11 rho_12 rho_31 rho_32 nodes b c
 
 % 二、系统输入
@@ -207,9 +210,12 @@ qd=[qd3;qd4];
 dqd=[dqd3;dqd4];
 ddqd=[ddqd3;ddqd4];
 
+% qd=qd-.5*[exe1(1);exe1(2)];
+% dqd=dqd-.9*[exe1(3);exe1(4)];
+
 % 四、误差信号
-e1=sq-qd;
-% e1=q-(qd-.5*e1_com); % OK
+% e1=sq-qd;
+e1=sq-(qd-.5*[exe1(1);exe1(2)]);
 de1=dq-dqd;
 
 % 五、虚拟控制器
@@ -280,13 +286,17 @@ e3=K2*e1+e2;
 end
 
 %% RBFNN权值计算
-function NN = Dynamics_W(W,e13_com,e14_com,qd3,qd4,dqd3,dqd4,sq,dq)
+function NN = Dynamics_W(exe1,W,e13_com,e14_com,qd3,qd4,dqd3,dqd4,sq,dq)
 global dt nodes Tau11 Tau12 eta1 b c K1 K2 rho_31 rho_32
 e1_com=[e13_com;e14_com];
 qd=[qd3;qd4]; 
 dqd=[dqd3;dqd4];
-e1=sq-qd;
-% e1=q-(qd-.5*e1_com); % OK
+
+% qd=qd-.5*[exe1(1);exe1(2)];
+% dqd=dqd-.9*[exe1(3);exe1(4)];
+
+% e1=sq-qd;
+e1=sq-(qd-.5*[exe1(1);exe1(2)]);
 miu=-K1*e1+dqd;
 e2=dq-miu;
 e3=K2*e1+e2;

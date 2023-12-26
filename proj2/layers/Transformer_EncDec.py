@@ -112,7 +112,7 @@ class feature_decompose(nn.Module):
 
 
 class feature_enhanced(nn.Module):
-    def __init__(self, in_channels, out_channels, seq_len, ratio=0.5):
+    def __init__(self, in_channels, out_channels, seq_len, ratio=0.5, use_lstm=True):
         """
         1D Fourier layer. It does FFT, linear transform, and Inverse FFT.
         """
@@ -122,7 +122,10 @@ class feature_enhanced(nn.Module):
         self.ratio = ratio
         self.modes = min(32, seq_len // 2)
         self.index = list(range(0, self.modes))
-
+        self.act = F.gelu
+        self.use_lstm = use_lstm
+        if self.use_lstm:
+            self.lstm = nn.LSTM(out_channels, out_channels, 1, batch_first=True)
         self.scale = (1 / (in_channels * out_channels))
         # 这里的可学习参数是为了保证计算前后的shape一致，这样效果剩余使用几个不同的linear进行变换
         self.weights_real = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, len(self.index), dtype=torch.float))  # [window_size,window_size,min(32,seq_len,pred_len]
@@ -143,6 +146,11 @@ class feature_enhanced(nn.Module):
         a = x_ft[:, :, :self.modes]  # [batch_size,enc_in,N,:mode]代表的是0~mode
         out_ft[:, :, :self.modes] = self.compl_mul1d("bix,iox->box", a, self.weights_real, self.weights_imag)  # 可以消去任意一项两者中共同出现的字母，并进行排序 # i=o 所以这里并没有改变形状
         x = torch.fft.irfft(out_ft, n=x.size(-1))
+        self.act(x)
+        if self.use_lstm:
+            x = x.permute(0,2,1)
+            x, _ = self.lstm(x)
+            x = x.permute(0, 2, 1)
         return x
 
 
@@ -182,8 +190,8 @@ class EncoderLayer_f(nn.Module):
             y = self.fe(y)
         else:
             y = self.fe(y.transpose(-1, 1)).transpose(-1, 1)
-        y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
-        y = self.dropout(self.conv2(y).transpose(-1, 1))
+        # y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
+        # y = self.dropout(self.conv2(y).transpose(-1, 1))
 
         return self.norm2(x + y), attn
 

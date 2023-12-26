@@ -12,7 +12,7 @@ do
 for learning_rate in 0.05 0.01 0.001 0.0001 0.00001
 do
   python -u testtt.py \
-  --buffer_size $buffer_size --buffer_size $batch_size --lr $learning_rate --model $model --seq_len $seq_len --pred_len $pred_len
+  --buffer_size $buffer_size --batch_size $batch_size --lr $learning_rate --model $model --seq_len $seq_len --pred_len $pred_len
 done
 done
 done
