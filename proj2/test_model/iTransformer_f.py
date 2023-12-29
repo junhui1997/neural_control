@@ -37,6 +37,7 @@ class Model(nn.Module):
         )
         # Decoder
         self.projection = nn.Linear(configs.d_model, configs.pred_len, bias=True)
+        torch.nn.init.xavier_uniform_(self.projection.weight)
         # b, s, f means b, f
         self.affine_weight = nn.Parameter(torch.ones(1, 1, configs.c_out))
         self.affine_bias = nn.Parameter(torch.zeros(1, 1, configs.c_out))

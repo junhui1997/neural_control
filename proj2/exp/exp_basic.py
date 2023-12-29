@@ -4,6 +4,7 @@ import torch
 from test_model.dnn import lstm_n
 from test_model.block import ReplayBuffer
 import torch.optim.lr_scheduler as lr_scheduler
+import numpy as np
 
 
 class dynamic_lr:
@@ -108,6 +109,26 @@ class dynamic_lr2:
                     if self.verbose:
                         print(f'lower learning rate updated to {self.optimizer.param_groups[0]["lr"]}')
 
+class dynamic_lr3:
+    '''
+
+    初始时候先固定一个，之后再用其他的
+    '''
+    def __init__(self, optimizer, lr=0.001, loss_len = 10):
+        self.optimizer = optimizer
+        self.lr = lr
+        self.loss_queue = []
+        self.loss_len = loss_len
+
+
+    def step(self, current_loss):
+        self.loss_queue.append(current_loss)
+        if len(self.loss_queue)>self.loss_len:
+            self.loss_queue.pop()
+        current_lr = self.lr*np.sqrt(np.mean(self.loss_queue))
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = current_lr
+
 class exp_model:
     ''' model for online training'''
 
@@ -116,7 +137,8 @@ class exp_model:
         self.replay_buffer = ReplayBuffer(args.buffer_size)
         self.model = Model(args).float().to(self.device)
         self.optimizer = optim.AdamW(self.model.parameters(), lr=args.lr)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', factor=0.999, patience=200, verbose=True)
+        # self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', factor=0.999, patience=200, verbose=True)
+        self.scheduler = dynamic_lr3(self.optimizer,  lr=args.lr, loss_len = 30)
         # self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.8)
         # self.scheduler = lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=500, eta_min=args.lr*0.01)
         # self.scheduler = dynamic_lr2(self.optimizer, mode='min', factor=0.99, improve_factor=1.1, patience=50, max_lr=1e-2,  min_lr=1e-7, verbose=True, improve_patience=5, lr=args.lr)
@@ -142,7 +164,7 @@ class exp_model:
         lr_prev = self.optimizer.param_groups[0]['lr']
         self.scheduler.step(loss.item())
         lr = self.optimizer.param_groups[0]['lr']
-        print(loss.item())
+        # print(loss.item())
         # if lr != lr_prev:
         #     print('Updating learning rate to {}'.format(lr))
 

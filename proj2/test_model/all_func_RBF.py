@@ -391,7 +391,7 @@ def Controller(W, e13_com, e14_com, qd3, qd4, dqd3, dqd4, ddqd3, ddqd4, sq, q, d
 
     # 误差信号
     # e1 = sq - qd
-    e1 = sq - (qd - 0.5 * e1_com)
+    e1 = sq - (qd - 2* e1_com)
     de1 = dq - dqd
 
     # 虚拟控制器
@@ -501,7 +501,7 @@ def Dynamics_W(W, e13_com, e14_com, qd3, qd4, dqd3, dqd4, sq, dq, dt):
     dqd = np.array([dqd3, dqd4]).reshape(-1, 1)
 
     #
-    e1 = sq - (qd - 0.5 * e1_com)
+    e1 = sq - (qd - 0.7* e1_com)
     miu = -K1 @ e1 + dqd
     e2 = dq - miu
     e3 = K2 @ e1 + e2

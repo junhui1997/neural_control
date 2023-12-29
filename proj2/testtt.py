@@ -4,9 +4,13 @@ from test_model.all_func import generate_mat, dynamic_adjust, visual_all, write_
 import os
 import argparse
 from exp.exp_basic import exp_model
-from test_model.dnn import lstm_p
-from test_model import iTransformer, FiLM, iTransformer_f
+from test_model.dnn import lstm_p, gru_p, bp_p
+from test_model import iTransformer, FiLM, iTransformer_f, Transformer
 import warnings
+import torch
+seeds = 42
+np.random.seed(seeds)
+torch.manual_seed(seeds)
 
 warnings.filterwarnings("ignore")
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
@@ -19,7 +23,7 @@ parser.add_argument('--seq_len', type=int, default=20, help='input sequence leng
 parser.add_argument('--pred_len', type=int, default=3, help='prediction length')
 parser.add_argument('--enc_in', type=int, default=4, help='encoder input size')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')  ###
-parser.add_argument('--c_out', type=int, default=4, help='encoder input size')
+parser.add_argument('--c_out', type=int, default=2, help='encoder input size')
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--dropout', type=int, default=0, help='dropout')
 parser.add_argument('--sample_type', type=str, default='log', help='sample type from replay buffer:[linear,log,random,single]')  # single 还没写
@@ -45,7 +49,7 @@ parser.add_argument('--distil', action='store_false', help='useless', default=Tr
 # for attention based model
 parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
 parser.add_argument('--factor', type=int, default=1, help='attn factor')
-parser.add_argument('--d_ff', type=int, default=16, help='dimension of fcn')
+parser.add_argument('--d_ff', type=int, default=32, help='dimension of fcn')
 # for timesNet
 parser.add_argument('--top_k', type=int, default=5, help='for TimesBlock')
 parser.add_argument('--num_kernels', type=int, default=6, help='for Inception')
@@ -57,6 +61,14 @@ if args.minimal_size > args.buffer_size:
     args.minimal_size = args.buffer_size
 if args.buffer_size < args.batch_size:
     args.buffer_size = args.batch_size
+
+if args.sample_type == 'linear':
+    args.buffer_size = args.batch_size
+    args.minimal_size = args.batch_size
+
+# 锁定dff
+args.d_ff = args.d_model
+
 setting = '{}_dm{}_el{}_sl{}_pl{}_co{}_bs{}_bfs{}_lr{}_st{}'.format(
     args.model,
     args.d_model,
@@ -75,7 +87,11 @@ if not os.path.exists(folder_path):
     os.makedirs(folder_path)
 
 model_dic = {'lstm': lstm_p,
+             'gru': gru_p,
+             'bp': bp_p,
              'it': iTransformer.Model,
+             'ts': Transformer.Model,
+             'tsf': Transformer.Model,
              'itf': iTransformer_f.Model,
              'FiLM': FiLM.Model}
 
@@ -90,7 +106,7 @@ i = 0  # python的i取值要注意 change
 T = 0
 dt = 0.0005
 nodes = 13
-to_train = 100
+to_train = 0
 q = np.array([0.005, -0.005]).reshape(-1, 1)  # initial value
 dq = np.array([-0.1705, 0.1576]).reshape(-1, 1)
 Weights = np.zeros((2 * nodes, 1)).reshape(-1, 1)
@@ -118,10 +134,10 @@ while count <= Number_All:  # 60001 or 60000?
         if i > args.seq_len + 1 and i > to_train:
             if args.input_type == 'actual':
                 total_info = np.concatenate((total_q.transpose()[-args.seq_len - 1:-1, :], total_dq.transpose()[-args.seq_len - 1:-1, :]), axis=1)[:, :args.enc_in]
-            total_label = np.concatenate((total_eq.transpose()[-args.pred_len:, :], total_edq.transpose()[-args.pred_len:, :]), axis=1)
+            total_label = np.concatenate((total_eq.transpose()[-args.pred_len:, :], total_edq.transpose()[-args.pred_len:, :]), axis=1)[:, :args.c_out]
             total_label = total_label*args.scale
             exps.update_buffer(total_info, total_label)
-        if exps.get_buffer_size() >= args.minimal_size and args.enable_net:
+        if exps.get_buffer_size() >= args.batch_size and args.enable_net:
             exps.train_one_epoch()
             if args.input_type == 'actual':
                 current_inputs = np.concatenate((total_q.transpose()[-args.seq_len:, :], total_dq.transpose()[-args.seq_len:, :]), axis=1)[:, :args.enc_in]
@@ -179,8 +195,9 @@ while count <= Number_All:  # 60001 or 60000?
         print(count)
         # print(e_pred)
 
-all_pred = total_pred.transpose()[to_train:, :]  # 去除掉最开始没有介入网络的部分
-all_true = np.concatenate((total_eq, total_edq), axis=0).transpose()[to_train:, :]
+start_v = max(to_train, args.seq_len+1)+args.batch_size
+all_pred = total_pred.transpose()[start_v:, :]  # 去除掉最开始没有介入网络的部分
+all_true = np.concatenate((total_eq, total_edq), axis=0).transpose()[start_v:, :args.c_out]
 
 # visual plot
 q3_12001 = Data_SS_Log[np.arange(0, 5 * Number_Major, 5), 0]
@@ -215,4 +232,4 @@ df = arrays_to_dataframe(q_ref, dq_ref, total_eq.transpose(), total_edq.transpos
 
 # visualize prediction and control data
 visual_all(all_true, all_pred, folder_path + 'loss_.png', args.c_out, show_plot=args.show_plot)
-plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path=folder_path, show_other=True, show_plot=args.show_plot)
+plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path=folder_path, show_other=True, show_plot=args.show_plot) #args.show_plot

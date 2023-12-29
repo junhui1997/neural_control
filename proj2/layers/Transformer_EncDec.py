@@ -112,7 +112,7 @@ class feature_decompose(nn.Module):
 
 
 class feature_enhanced(nn.Module):
-    def __init__(self, in_channels, out_channels, seq_len, ratio=0.5, use_lstm=True):
+    def __init__(self, in_channels, out_channels, seq_len, ratio=0.5, use_lstm=False):
         """
         1D Fourier layer. It does FFT, linear transform, and Inverse FFT.
         """
@@ -180,7 +180,7 @@ class EncoderLayer_f(nn.Module):
         )
         x = x + self.dropout(new_x)
 
-        y = x = self.norm1(x)
+        y = x = self.norm1(new_x)
         # 两层norm间是feed forward
         # conv1d是对第二个维度，也就是通道方面做得变换
         # 对于标准transformer[batch_size,seq_len,d_model]->[batch_size,d_ff,seq_len]->[batch_size,seq_len,d_model]
@@ -190,10 +190,10 @@ class EncoderLayer_f(nn.Module):
             y = self.fe(y)
         else:
             y = self.fe(y.transpose(-1, 1)).transpose(-1, 1)
-        # y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
-        # y = self.dropout(self.conv2(y).transpose(-1, 1))
+        y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
+        y = self.dropout(self.conv2(y).transpose(-1, 1))
 
-        return self.norm2(x + y), attn
+        return self.norm2(y) ,None
 
 
 class EncoderLayer_d(nn.Module):
