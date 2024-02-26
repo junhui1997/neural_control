@@ -124,6 +124,7 @@ class dynamic_lr3:
     def step(self, current_loss):
         self.loss_queue.append(current_loss)
         if len(self.loss_queue)>self.loss_len:
+
             self.loss_queue.pop()
         current_lr = self.lr*np.sqrt(np.mean(self.loss_queue))
         for param_group in self.optimizer.param_groups:

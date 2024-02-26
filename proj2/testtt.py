@@ -131,9 +131,9 @@ while count <= Number_All:  # 60001 or 60000?
 
     if (count - 1) % 5 == 0:  # MajorSteps # 控制器频率是实际的五分之一
         # update replay buffer
-        if i > args.seq_len + 1 and i > to_train:
+        if i > args.seq_len + args.pred_len and i > to_train:
             if args.input_type == 'actual':
-                total_info = np.concatenate((total_q.transpose()[-args.seq_len - 1:-1, :], total_dq.transpose()[-args.seq_len - 1:-1, :]), axis=1)[:, :args.enc_in]
+                total_info = np.concatenate((total_q.transpose()[-args.seq_len - args.pred_len:-args.pred_len, :], total_dq.transpose()[-args.seq_len - args.pred_len:-args.pred_len, :]), axis=1)[:, :args.enc_in]
             total_label = np.concatenate((total_eq.transpose()[-args.pred_len:, :], total_edq.transpose()[-args.pred_len:, :]), axis=1)[:, :args.c_out]
             total_label = total_label*args.scale
             exps.update_buffer(total_info, total_label)
@@ -145,7 +145,8 @@ while count <= Number_All:  # 60001 or 60000?
             # [c_out, pred_len, 1]
             pred = exps.pred(current_inputs)[:, 0, :]
             pred = pred/args.scale
-            pred_dy = dynamic_adjust(pred, i, 500)  # 大学习率和最开始输出控制
+            pred_dy = dynamic_adjust(pred, i, 200)  # 大学习率和最开始输出控制
+            # pred_dy = pred
             e_pred = pred_dy[:2, :]
             de_pred = pred_dy[2:, :]
             # de_pred = dynamic_adjust(de_pred, counter, 5000)
@@ -175,6 +176,7 @@ while count <= Number_All:  # 60001 or 60000?
         Data_Tau_Log[i, 0:2] = [Torque[2], Torque[3]]  # change
         #
         e_q_t = q_sample - q_ref[i].reshape(-1, 1)
+        # e_q_t = q - q_ref[i].reshape(-1, 1)
         e_dq_t = dq - dq_ref[i].reshape(-1, 1)
         total_eq = np.concatenate((total_eq, e_q_t), axis=1)
         total_edq = np.concatenate((total_edq, e_dq_t), axis=1)
@@ -231,5 +233,8 @@ df = arrays_to_dataframe(q_ref, dq_ref, total_eq.transpose(), total_edq.transpos
 # df.to_pickle('data/pd_rbf.pkl')
 
 # visualize prediction and control data
-visual_all(all_true, all_pred, folder_path + 'loss_.png', args.c_out, show_plot=args.show_plot)
+visual_all(all_true, all_pred, folder_path + 'loss_.svg', args.c_out, show_plot=args.show_plot)
 plot_data(qd3, qd4, dqd3, dqd4, Data_SS_Log, Data_Tau_Log, Number_Major, T_final, dt, folder_path=folder_path, show_other=True, show_plot=args.show_plot) #args.show_plot
+
+# to do
+# 相同的较大的to_start之后，看看seq_len对数据的影响
